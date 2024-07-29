@@ -1,0 +1,29 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<div class="row">
+    <div class="col-12">
+        <h3 class="fw-bolder">Welcome to FSITTAsk Application <span class="text-danger fst-italic small">by Mohammad Khalifeh</span></h3>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <AuthorizeView>
+                    <NotAuthorized>
+                        <span>
+                            Do you want to log in?
+                            <a href="/login">Click Here to Login</a>
+                        </span>
+                    </NotAuthorized>
+                    <Authorized>
+                        <span>
+                            Welcome @context.User.Identity.Name
+                            <a href="/logout">Click Here to logout</a>
+                        </span>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </div>
+</div>

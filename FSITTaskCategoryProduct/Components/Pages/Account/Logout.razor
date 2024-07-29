@@ -1,0 +1,39 @@
+﻿@page "/logout"
+
+@using FSITTaskCategoryProduct.Models.ViewModels
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authentication
+@inject NavigationManager navManager;
+ 
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body flex-column">
+                <div class="text-center">
+                    <span class="text-danger fw-bolder">You have successfully logged out</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    FSITCategoryProductAPI api = new FSITCategoryProductAPI();
+    [CascadingParameter]
+    public HttpContext? httpContext { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (httpContext.User.Identity.IsAuthenticated)
+        {
+            // api
+            await httpContext.SignOutAsync();
+            navManager.NavigateTo("/logout", true);
+        }
+    }
+
+
+}

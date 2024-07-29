@@ -1,0 +1,329 @@
+﻿@page "/product"
+
+@using FSITLib.OPERATION
+
+@rendermode InteractiveServer
+@inject NavigationManager navManager;
+
+<PageTitle>Product</PageTitle>
+
+<h2 class="col-12">Product</h2>
+
+<InputSelect id="productDropDown" class="form-select" 
+             ValueExpression="@(()=>UpdatedCurrentProductValue)"
+            ValueChanged="@((long value) => ProductChanged(value))" 
+    >
+    @foreach (var product in Products)
+    {
+        <option value="@product.PRODUCT_ID">@product.PRODUCT_NAME</option>
+    }
+</InputSelect>
+
+
+<AuthorizeView>
+    <NotAuthorized>
+        <h4 class="m-1 ">Categories</h4>
+        <div class="row">
+            @foreach (var cat in UpdateproductCategories)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <span class="col-11">@cat.CATEGORY_NAME</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </NotAuthorized>
+    <Authorized>
+        <div>
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="m-2 row text-center bg-warning">Update</h4>
+                </div>
+            </div>
+            
+            <h4 class="m-1">Categories</h4>
+            @{
+                if (UpdateproductCategories.Count == 0)
+                {
+                    <div class="card">
+                            <div class="card-body">
+                                <span class="row text-center ">No Categories Assigned</span>
+                        </div>
+                    </div>
+                }
+                else
+                    foreach (var cat in UpdateproductCategories)
+                    {
+                        <div class="card">
+                            <div class="card-body">
+                                <span class="col-1">
+                                    <input type="checkbox" name="@cat.CATEGORY_ID" checked="checked"
+                                           @onchange="eventArgs => { UpdatedCheckboxClicked(cat.CATEGORY_ID, eventArgs); }" />
+                                </span>
+                                <span class="col-11">@cat.CATEGORY_NAME</span>
+
+                            </div>
+                        </div>
+                    }
+            }
+            <div class="row bg-secondary">
+                <div class="card">
+                    <div class="card-header">New Name</div>
+                    <div class="card-body">
+                        <input class="form-text" type="text" value="@UpdatedName"
+                               @onchange="e => {UpdateProductNameChanged(e);}" />
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="card">
+                    <div class="card-body">
+                        <button class="btn btn-primary" onclick="@(() => UpdateProduct())">Update</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="m-2 row text-center bg-danger">Delete</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="card">
+                    <div class="card-body">
+                        <button class="btn btn-danger" onclick="@(() => DeleteProduct())">Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="m-2 row text-center bg-success">New Product</h4>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Product Name</div>
+                <div class="card-body">
+                    <input class="form-text" type="text" value="@newProduct.PRODUCT_NAME" 
+                    @onchange="e => {AddProductNameChanged(e);}"/>
+                </div>
+            </div>
+            @{
+                if (AllCategories.Count == 0)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <span class="row text-center ">No Categories Yet!</span>
+                        </div>
+                    </div>
+                }
+                else
+                    foreach (var cat in AllCategories)
+                    {
+                        <div class="card">
+                            <div class="card-body">
+                                <span class="col-1">
+                                    <input type="checkbox" name="@cat.CATEGORY_ID" 
+                                           @onchange="eventArgs => { AddCheckboxClicked(cat.CATEGORY_ID, eventArgs); }" />
+                                </span>
+                                <span class="col-11">@cat.CATEGORY_NAME</span>
+
+                            </div>
+                        </div>
+                    }
+            }
+            <div class="row">
+                <div class="card">
+                    <div class="card-body">
+                        <button class="btn btn-success" onclick="@(() => AddProduct())">Add</button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+
+@code {
+    #region Class Variables
+    // API Class Initaition
+    FSITCategoryProductAPI api = new FSITCategoryProductAPI();
+
+    // All Products List
+    private List<PRODUCT> Products;
+
+    // New Product
+    private List<CATEGORY> AllCategories;
+    private PRODUCT newProduct;
+    private List<CATEGORY_PRODUCT> newProductCategories;
+    private List<long> AddSelectedCategories;
+    private List<long> AddDeslectedCategories;
+    private string AddError = string.Empty;
+
+    // Update
+    PRODUCT UpdatedProduct;
+    private List<CATEGORY> UpdateproductCategories;
+    private long UpdatedCurrentProductValue = 0;
+    private List<long> UpdatedSelectedCategories;
+    private List<long> UpdatedDeslectedCategories;
+    private string UpdatedName = string.Empty;
+    private string UpdateError = string.Empty;
+
+    #endregion
+
+    #region Initilization
+    protected override async Task OnInitializedAsync()
+    {
+        // General
+        AllCategories = api.GetCategories();
+        Products = api.GetProducts();
+        //Update
+        UpdatedProduct = new();
+        UpdateproductCategories = new();
+        UpdatedCurrentProductValue = Products[0].PRODUCT_ID;
+        UpdateproductCategories = api.GetCategoriesByProductID(UpdatedCurrentProductValue);
+        UpdatedSelectedCategories = new();
+        foreach (var cat in UpdateproductCategories)
+        {
+            UpdatedSelectedCategories.Add(cat.CATEGORY_ID);
+        }
+        UpdatedDeslectedCategories = new();
+
+        // Add
+        newProduct = new();
+        AddSelectedCategories = new();
+        AddDeslectedCategories = new();
+        newProductCategories = new();
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Selection
+    private Task ProductChanged(long value)
+    {
+        // Assign the selected value to the Model
+        UpdatedCurrentProductValue = value;
+        UpdatedProduct = Products[((int)value) - 1];
+        UpdatedName = Products[((int)value) - 1].PRODUCT_NAME;
+        UpdateproductCategories = api.GetCategoriesByProductID(UpdatedCurrentProductValue);
+        UpdatedSelectedCategories.Clear();
+        foreach (var cat in UpdateproductCategories)
+        {
+            UpdatedSelectedCategories.Add(cat.CATEGORY_ID);
+        }
+        UpdatedDeslectedCategories.Clear();
+        return Task.CompletedTask;
+    }
+    #endregion
+
+    #region Update
+    private void UpdateProduct()
+    {
+        PRODUCT xUpdatedRecord = new();
+        if (Products.FindIndex(x => x.PRODUCT_NAME == UpdatedProduct.PRODUCT_NAME) == -1)
+        {
+            UpdateError = "Product is not found!!!";
+            return;
+        }
+        else
+        {
+            xUpdatedRecord = api.UpdateProduct(UpdatedProduct);
+        }
+        // Update Product-Category Relations
+        List<CATEGORY_PRODUCT> AddedRelations = new();
+        foreach (var selectedCategory in UpdatedDeslectedCategories)
+        {
+            AddedRelations.Add(api.AddNewCATEGORY_PRODUCT(new CATEGORY_PRODUCT()
+                {
+                    PRODUCT_ID = xUpdatedRecord.PRODUCT_ID,
+                    CATEGORY_ID = selectedCategory
+
+                }));
+        }
+        navManager.NavigateTo("/product", true);
+    }
+    private void UpdatedCheckboxClicked(long catID, ChangeEventArgs e)
+    {
+        // get the checkbox state
+
+        bool value = (bool)e.Value;
+        if (!value)
+        {
+            UpdatedDeslectedCategories.Add(catID);
+        }
+        else
+        {
+            if (UpdatedDeslectedCategories.Contains(catID))
+            {
+                UpdatedDeslectedCategories.Remove(catID);
+            }
+        }
+    }
+
+    private void UpdateProductNameChanged(ChangeEventArgs e)
+    {
+        UpdatedProduct.PRODUCT_NAME = e.Value.ToString();
+    }
+    #endregion
+
+    #region Add Product
+    private void AddProduct()
+    {
+        PRODUCT xNewRecord = new();
+        newProduct.PRODUCT_ISDELETED = 0;
+        if (Products.FindIndex(x => x.PRODUCT_NAME == newProduct.PRODUCT_NAME) == -1)
+        {
+            xNewRecord = api.AddNewProduct(newProduct);
+        }
+        else
+        {
+            AddError = "Product is already there";
+            return;
+        }
+        // Update Product-Category Relations
+        List<CATEGORY_PRODUCT> AddedRelations = new();
+        foreach (var selectedCategory in AddSelectedCategories)
+        {
+            AddedRelations.Add(api.AddNewCATEGORY_PRODUCT(new CATEGORY_PRODUCT()
+            {
+                    PRODUCT_ID = xNewRecord.PRODUCT_ID,
+                    CATEGORY_ID = selectedCategory
+
+            }));
+        }
+        navManager.NavigateTo("/product",true);
+    }
+
+    private void AddCheckboxClicked(long catID, ChangeEventArgs e)
+    {
+        // get the checkbox state
+
+        bool value = (bool)e.Value;
+        if (value)
+        {
+            AddSelectedCategories.Add(catID);
+        }
+        else
+        {
+            if (AddSelectedCategories.Contains(catID))
+            {
+                AddSelectedCategories.Remove(catID);
+            }
+        }
+    }
+    private void AddProductNameChanged(ChangeEventArgs e)
+    {
+        newProduct.PRODUCT_NAME = e.Value.ToString();
+    }
+    #endregion
+    #region Delete
+    // Deletion
+    private void DeleteProduct()
+    {
+        
+    }
+    #endregion
+    
+}

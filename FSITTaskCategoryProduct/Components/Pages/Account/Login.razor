@@ -1,0 +1,66 @@
+﻿@page "/login"
+
+@using FSITTaskCategoryProduct.Models.ViewModels
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authentication
+@inject NavigationManager navManager;
+
+<div class="row">
+    <EditForm Model="@Model" OnValidSubmit="Authenticate" FormName="LoginForm">
+        <DataAnnotationsValidator />
+        <div class="mb-3 text-center flex-column">
+            <h3>LOGIN</h3>
+        </div>
+        <div class="mb-3">
+            <label>User Name</label>
+            <InputText @bind-Value="Model.UserName" class="form-control" placeholder="User name" />
+            <ValidationMessage For="() => Model.UserName" />
+        </div>
+        <div class="mb-3">
+            <label>Password</label>
+            <InputText @bind-Value="Model.Password" class="form-control" placeholder="Password" type="password"/>
+            <ValidationMessage For="() => Model.Password" />
+        </div>
+        <div class="mb-3 text-center">
+            <span class="text-danger">@errMsg</span>
+        </div>
+        <div class="mb-3 d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Login</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    FSITCategoryProductAPI api = new FSITCategoryProductAPI();
+    [CascadingParameter]
+    public HttpContext? httpContext { get; set; } 
+
+    [SupplyParameterFromForm]
+    public LoginViewModel Model { get; set; } = new();
+
+    private string? errMsg;
+
+    private async Task Authenticate()
+    {
+        var useraccount = api.getUser(Model.UserName);
+        if (useraccount == null || useraccount.USER_PASSSWORD != Model.Password)
+        {
+            errMsg = "Invalid User";
+            return;
+        }
+
+        var claims = new List<Claim>()
+        {
+            new Claim(ClaimTypes.Name, Model.UserName),
+            //new Claim(ClaimTypes.Role, useraccount.USER_EMAIL)
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await httpContext.SignInAsync(principal);
+        navManager.NavigateTo("/");
+
+    }
+}
